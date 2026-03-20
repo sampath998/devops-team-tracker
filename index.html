@@ -1,1 +1,751 @@
-..
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DevOps Team Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--bg4:#2a2f45;
+  --border:#2e3450;--border2:#3d4466;
+  --text:#e8eaf6;--text2:#9fa8c7;--text3:#6b75a0;
+  --teal:#1D9E75;--teal2:#0F6E56;--teal3:#d5edef;
+  --blue:#378ADD;--blue2:#185FA5;--blue3:#e6f1fb;
+  --orange:#D4622A;--orange2:#993C1D;--orange3:#fae5d8;
+  --green:#639922;--green2:#3B6D11;--green3:#eaf3de;
+  --purple:#7F77DD;--purple2:#534AB7;--purple3:#eeedfe;
+  --red:#E24B4A;--red2:#A32D2D;--red3:#fcebeb;
+  --gold:#EF9F27;--gold2:#854F0B;--gold3:#faeeda;
+  --radius:10px;--radius2:6px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:20px 16px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.header-title{font-size:20px;font-weight:600;color:var(--text)}
+.header-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.sync-btn{padding:7px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);color:var(--text2);cursor:pointer;font-size:12px;transition:all .2s}
+.sync-btn:hover{background:var(--bg4);color:var(--text)}
+.sync-indicator{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--teal);margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);padding:4px;border-radius:var(--radius);border:1px solid var(--border)}
+.tab{flex:1;padding:8px;border:none;background:none;color:var(--text3);cursor:pointer;border-radius:var(--radius2);font-size:13px;font-weight:500;transition:all .2s;text-align:center}
+.tab.active{background:var(--bg4);color:var(--text);border:1px solid var(--border2)}
+.tab:hover:not(.active){color:var(--text2)}
+.screen{display:none}.screen.active{display:block}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+/* Metric grid */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.metric-val{font-size:26px;font-weight:700;margin-bottom:2px}
+.metric-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+
+/* Member selector */
+.member-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.mbtn{padding:10px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;text-align:center;transition:all .2s}
+.mbtn.active{border-color:var(--teal);background:var(--bg4)}
+.mbtn:hover:not(.active){border-color:var(--border2)}
+.mbtn .av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:0 auto 6px}
+.mbtn .mn{font-size:12px;font-weight:600;color:var(--text)}
+.mbtn .ms{font-size:10px;color:var(--text3)}
+
+/* Progress bars */
+.pbar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pbar-label{font-size:12px;color:var(--text2);width:80px;flex-shrink:0}
+.pbar{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:3px;transition:width .4s}
+.pbar-pct{font-size:11px;color:var(--text3);width:30px;text-align:right}
+
+/* Task rows */
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.task-item:last-child{border-bottom:none}
+.tchk{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);background:var(--bg3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .2s;font-size:11px}
+.tchk.done{background:var(--teal);border-color:var(--teal);color:#fff}
+.task-body{flex:1;min-width:0}
+.task-title{font-size:13px;font-weight:500;margin-bottom:4px;transition:all .2s}
+.task-title.done{text-decoration:line-through;color:var(--text3)}
+.task-meta{font-size:11px;color:var(--text3);margin-bottom:4px;line-height:1.5}
+.task-proof{font-size:11px;color:var(--blue);background:rgba(55,138,221,.12);padding:3px 8px;border-radius:4px;display:inline-block}
+
+/* Tags */
+.tag{font-size:10px;padding:2px 7px;border-radius:3px;display:inline-block;margin-right:4px;font-weight:600}
+.tag-easy{background:rgba(99,153,34,.2);color:#97C459}
+.tag-med{background:rgba(239,159,39,.2);color:#EF9F27}
+.tag-hard{background:rgba(226,75,74,.2);color:#E24B4A}
+.tag-topic{background:var(--bg4);color:var(--text2)}
+
+/* Streak dots */
+.streak-grid{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:10px}
+.sdot{width:13px;height:13px;border-radius:3px;background:var(--bg4)}
+.sdot.on{background:var(--teal)}
+.sdot.today{border:1.5px solid var(--teal);background:transparent}
+
+/* Gate items */
+.gate-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.gate-item:last-child{border-bottom:none}
+.gchk{width:17px;height:17px;border-radius:3px;border:1.5px solid var(--border2);cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s}
+.gchk.passed{background:var(--teal);border-color:var(--teal);color:#fff}
+
+/* Leaderboard */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.lb-row:last-child{border-bottom:none}
+.rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.r1{background:#EF9F27;color:#412402}.r2{background:#888780;color:#2C2C2A}.r3{background:#D85A30;color:#4A1B0C}
+.rn{background:var(--bg4);color:var(--text3)}
+
+/* Buttons */
+.btn{padding:8px 16px;border:1px solid var(--border2);border-radius:var(--radius2);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.btn:hover{background:var(--bg4);color:var(--text)}
+.btn-primary{background:var(--teal);border-color:var(--teal2);color:#fff}
+.btn-primary:hover{background:var(--teal2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Module status badges */
+.badge{font-size:10px;padding:3px 8px;border-radius:3px;font-weight:600}
+.badge-done{background:rgba(29,158,117,.2);color:var(--teal)}
+.badge-wip{background:rgba(239,159,39,.2);color:var(--gold)}
+.badge-todo{background:var(--bg4);color:var(--text3)}
+
+/* Notice box */
+.notice{background:rgba(55,138,221,.1);border:1px solid rgba(55,138,221,.25);border-radius:var(--radius2);padding:10px 14px;font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px}
+
+/* Log hours */
+.log-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--border);margin-top:4px}
+.log-row input{width:70px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);color:var(--text);font-size:13px}
+.log-row input:focus{outline:none;border-color:var(--teal)}
+
+/* Phase blocks */
+.phase-hdr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius2);margin-bottom:6px}
+.phase-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.mod-item{padding:8px 12px 8px 52px;display:flex;align-items:center;justify-content:space-between;border-radius:var(--radius2);margin-bottom:3px}
+.mod-item.current{background:var(--bg3)}
+
+/* Update textarea */
+.update-area{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;min-height:120px;line-height:1.6}
+.update-area:focus{outline:none;border-color:var(--teal)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--teal);color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* Saving indicator */
+.saving{font-size:11px;color:var(--text3);margin-left:8px}
+
+/* Info table */
+.info-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.info-table td{padding:7px 10px;border:1px solid var(--border);font-size:12px;vertical-align:top}
+.info-table td:first-child{background:var(--bg3);color:var(--text2);font-weight:600;width:35%;white-space:nowrap}
+.info-table td:last-child{color:var(--text2)}
+
+@media(max-width:600px){
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .member-row{grid-template-columns:repeat(3,1fr)}
+  .tabs .tab{font-size:11px;padding:7px 4px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="header-title"><span class="sync-indicator"></span>DevOps Team Tracker</div>
+    <div class="header-sub">Icanio — SRE / Platform Engineer Path &nbsp;·&nbsp; Mastery-Based Progress</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="saving" id="save-status"></span>
+    <button class="sync-btn" onclick="loadAll()">↻ Sync</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="tab" onclick="showTab('daily',this)">Daily Tasks</button>
+  <button class="tab" onclick="showTab('progress',this)">Progress</button>
+  <button class="tab" onclick="showTab('gates',this)">Mastery Gates</button>
+  <button class="tab" onclick="showTab('checkin',this)">AI Check-in</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="screen active">
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-val" id="m-members" style="color:var(--teal)">5</div><div class="metric-lbl">Team Members</div></div>
+    <div class="metric"><div class="metric-val" id="m-studied" style="color:var(--blue)">0</div><div class="metric-lbl">Studied Today</div></div>
+    <div class="metric"><div class="metric-val" id="m-tasks" style="color:var(--gold)">0</div><div class="metric-lbl">Tasks Done</div></div>
+    <div class="metric"><div class="metric-val" id="m-gates" style="color:var(--purple)">0</div><div class="metric-lbl">Gates Passed</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Team Leaderboard</div>
+    <div id="leaderboard"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Member Detail</div>
+    <div class="member-row" id="dash-members"></div>
+    <div id="dash-detail"></div>
+  </div>
+</div>
+
+<!-- DAILY TASKS -->
+<div id="daily" class="screen">
+  <div class="member-row" id="daily-members"></div>
+  <div id="daily-content"></div>
+</div>
+
+<!-- PROGRESS -->
+<div id="progress" class="screen">
+  <div class="member-row" id="prog-members"></div>
+  <div id="prog-content"></div>
+</div>
+
+<!-- MASTERY GATES -->
+<div id="gates" class="screen">
+  <div class="member-row" id="gates-members"></div>
+  <div id="gates-content"></div>
+</div>
+
+<!-- AI CHECK-IN -->
+<div id="checkin" class="screen">
+  <div class="card">
+    <div class="card-title">Daily Team Update — Paste & Send to AI Mentor</div>
+    <div class="notice">
+      Copy the format below, fill in your team's update, then click Send. Your AI mentor will analyse progress, flag blockers, and give specific next actions per member.
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:12px;margin-bottom:14px;font-family:monospace;font-size:12px;color:var(--text2);line-height:1.9">
+      Member: Akshay Sudhan<br>
+      Hours today: 2<br>
+      Task completed: yes / no / partial<br>
+      What was done: [brief description]<br>
+      Blocked on: [issue or "nothing"]<br>
+      Proof submitted: [GitHub link or "pending"]<br>
+      ---<br>
+      Member: Gautham Natarajan<br>
+      ... (repeat for all 5)
+    </div>
+    <textarea class="update-area" id="update-text" placeholder="Paste your team update here..."></textarea>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" onclick="sendCheckin()">Send to AI Mentor →</button>
+      <span style="font-size:12px;color:var(--text3)">Opens in your Claude conversation</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">How to use this tracker as a team</div>
+    <table class="info-table">
+      <tr><td>Your team's URL</td><td id="team-url" style="color:var(--teal);word-break:break-all"></td></tr>
+      <tr><td>Each evening</td><td>Every member opens the URL → clicks their name → logs hours + ticks tasks done</td></tr>
+      <tr><td>Every 3–4 days</td><td>You paste a team update in this tab and send to AI mentor for analysis</td></tr>
+      <tr><td>End of each module</td><td>Member works through Mastery Gate — all items checked before moving forward</td></tr>
+      <tr><td>Weekly sync (30 min)</td><td>Team meeting — one thing learned, one thing confusing, one goal for next week</td></tr>
+      <tr><td>Data saves to</td><td>AWS DynamoDB — persists across all devices and sessions</td></tr>
+    </table>
+  </div>
+</div>
+
+</div><!-- /app -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://iceestq0xh.execute-api.ap-south-1.amazonaws.com/default/tracker-api';
+const TODAY = new Date().toISOString().split('T')[0];
+
+const MEMBERS = [
+  {id:'akshay',   name:'Akshay',   last:'Sudhan',       initials:'AS', color:'#1D9E75'},
+  {id:'gautham',  name:'Gautham',  last:'Natarajan',    initials:'GN', color:'#378ADD'},
+  {id:'priyanka', name:'Priyanka', last:'Rajavinayagam',initials:'PR', color:'#EF9F27'},
+  {id:'varshini', name:'Varshini', last:'Ramithaa',     initials:'VR', color:'#D4537E'},
+  {id:'saranya',  name:'Saranya',  last:'Muragan',      initials:'SM', color:'#7F77DD'},
+];
+
+const PHASES = [
+  {id:'p1',label:'Phase 1',name:'Foundations Deep Dive',color:'#1D9E75',modules:[
+    {id:'m11',name:'Linux — CLI to Confident',tasks:[
+      {id:'t1',title:'Process management: ps, top, kill, systemctl, journalctl',topic:'Linux',diff:'easy',resource:'linuxjourney.com + man pages',proof:'Script: process-monitor.sh on GitHub'},
+      {id:'t2',title:'SSH mastery: key-pair auth, config aliases, tunnelling',topic:'Linux',diff:'easy',resource:'OverTheWire Bandit levels 13-14',proof:'Screenshot: SSH login with key + ~/.ssh/config alias'},
+      {id:'t3',title:'Text processing: grep -E, awk, sed pipelines',topic:'Linux',diff:'med',resource:'explainshell.com + Ryan\'s Linux Tutorial',proof:'Script: log-parser.sh — top 5 IPs from auth.log'},
+      {id:'t4',title:'Disk, inodes, hard vs soft links, /etc/fstab',topic:'Linux',diff:'easy',resource:'Linux Journey — filesystem section',proof:'README with commands + outputs + explanation'},
+      {id:'t5',title:'Cron jobs: scheduling, logging, crontab syntax',topic:'Linux',diff:'easy',resource:'crontab.guru + man 5 crontab',proof:'Crontab entry + log file output screenshot'},
+    ]},
+    {id:'m12',name:'Git — Professional Workflow',tasks:[
+      {id:'t6',title:'Interactive rebase: squash, reword, reorder commits',topic:'Git',diff:'med',resource:'learngitbranching.js.org levels 1-8',proof:'GitHub repo showing clean squashed commit log'},
+      {id:'t7',title:'Merge conflict resolution end-to-end',topic:'Git',diff:'med',resource:'Pro Git Book chapter 3',proof:'Screenshot: resolved conflict + git log --graph --oneline'},
+      {id:'t8',title:'Git hooks: pre-commit running shellcheck',topic:'Git',diff:'med',resource:'Pro Git Book chapter 8',proof:'.git/hooks/pre-commit script committed to repo'},
+      {id:'t9',title:'Branch protection + full PR review workflow',topic:'Git',diff:'easy',resource:'GitHub Docs: branch protection rules',proof:'GitHub settings screenshot + merged PR link'},
+    ]},
+    {id:'m13',name:'Networking Fundamentals',tasks:[
+      {id:'t10',title:'Subnetting and CIDR notation: 20 practice exercises',topic:'Net',diff:'med',resource:'subnettingpractice.com',proof:'Completed worksheet: 5 subnets, all fields filled'},
+      {id:'t11',title:'DNS resolution deep dive with dig +trace',topic:'Net',diff:'easy',resource:'Cloudflare Learning Center — DNS',proof:'Terminal output of dig +trace with written explanation'},
+      {id:'t12',title:'HTTP and TLS inspection with curl -v',topic:'Net',diff:'med',resource:'MDN HTTP docs + curl man page',proof:'Annotated curl -v output: headers, TLS version, status'},
+      {id:'t13',title:'iptables firewall rules: allow SSH/HTTP, drop rest',topic:'Net',diff:'hard',resource:'frozentux.net/iptables-tutorial',proof:'iptables-setup.sh on GitHub with comments'},
+    ]},
+  ]},
+  {id:'p2',label:'Phase 2',name:'Containers & CI/CD',color:'#D4622A',modules:[
+    {id:'m21',name:'Docker — Production Ready',tasks:[
+      {id:'t14',title:'Multi-stage Dockerfile: build vs runtime stage',topic:'Docker',diff:'med',resource:'docs.docker.com: multi-stage builds',proof:'Dockerfile on GitHub + README: size before vs after'},
+      {id:'t15',title:'Docker Compose: 3-tier app with healthcheck dependencies',topic:'Docker',diff:'med',resource:'Docker Compose docs',proof:'docker-compose.yml with healthcheck-gated services'},
+      {id:'t16',title:'Container security: Trivy scan, fix all HIGH CVEs',topic:'Docker',diff:'hard',resource:'aquasecurity.github.io/trivy',proof:'Trivy output + fixed Dockerfile proving 0 HIGH CVEs'},
+      {id:'t17',title:'Image layer caching analysis with Dive tool',topic:'Docker',diff:'med',resource:'github.com/wagoodman/dive',proof:'Dive screenshot + optimised Dockerfile explanation'},
+    ]},
+    {id:'m22',name:'CI/CD — GitHub Actions',tasks:[
+      {id:'t18',title:'Pipeline: lint + pytest on every PR, block merge on fail',topic:'CI/CD',diff:'med',resource:'docs.github.com/actions',proof:'.github/workflows/ci.yml + failed PR screenshot'},
+      {id:'t19',title:'Docker build + push to GHCR on merge to main',topic:'CI/CD',diff:'med',resource:'docker/build-push-action on Marketplace',proof:'Workflow file + Docker Hub or GHCR image link'},
+      {id:'t20',title:'Matrix build: test across Python 3.10, 3.11, 3.12',topic:'CI/CD',diff:'hard',resource:'GitHub Actions: matrix strategy',proof:'GitHub Actions run showing 3 parallel jobs'},
+      {id:'t21',title:'Manual deploy workflow with environment approval gate',topic:'CI/CD',diff:'hard',resource:'GitHub Docs: environments',proof:'Workflow with workflow_dispatch + required reviewer'},
+    ]},
+  ]},
+  {id:'p3',label:'Phase 3',name:'Cloud & Kubernetes',color:'#1C6E3D',modules:[
+    {id:'m31',name:'AWS Production Patterns',tasks:[
+      {id:'t22',title:'VPC from scratch with AWS CLI only — no console clicks',topic:'AWS',diff:'hard',resource:'AWS CLI docs: ec2 commands',proof:'vpc-setup.sh script + architecture diagram on GitHub'},
+      {id:'t23',title:'IAM least-privilege policy: read one S3 bucket only',topic:'AWS',diff:'hard',resource:'IAM Policy Simulator + AWS docs',proof:'IAM policy JSON + test showing denied write access'},
+      {id:'t24',title:'3-tier app: ALB → Auto Scaling Group → RDS',topic:'AWS',diff:'hard',resource:'AWS Architecture Center',proof:'Architecture diagram + CLI commands in README'},
+      {id:'t25',title:'CloudWatch alarms and dashboard for EC2 + RDS',topic:'AWS',diff:'med',resource:'CloudWatch documentation',proof:'Screenshot of alarm in ALARM state + dashboard'},
+    ]},
+    {id:'m32',name:'Kubernetes — Zero to Confident',tasks:[
+      {id:'t26',title:'Deploy app: Deployment + Service, observe self-healing',topic:'K8s',diff:'med',resource:'kubernetes.io/docs: deployments',proof:'kubectl get all output + app accessible via NodePort'},
+      {id:'t27',title:'Liveness and readiness probes: break and fix',topic:'K8s',diff:'hard',resource:'K8s docs: configure liveness probes',proof:'CrashLoopBackOff screenshot + fix + explanation'},
+      {id:'t28',title:'RBAC: Role + RoleBinding for read-only service account',topic:'K8s',diff:'hard',resource:'K8s docs: RBAC authorization',proof:'RBAC YAML + test showing permission denied screenshot'},
+      {id:'t29',title:'StatefulSet with PVC: prove data persists after pod delete',topic:'K8s',diff:'hard',resource:'K8s docs: statefulsets',proof:'Before/after pod delete screenshot showing data intact'},
+      {id:'t30',title:'Helm chart from scratch: 3 parameterised values',topic:'K8s',diff:'hard',resource:'helm.sh/docs',proof:'Helm chart in /helm dir, deployed with custom values.yaml'},
+    ]},
+  ]},
+  {id:'p4',label:'Phase 4',name:'IaC & Observability',color:'#534AB7',modules:[
+    {id:'m41',name:'Terraform IaC',tasks:[
+      {id:'t31',title:'Terraform VPC from scratch: variables, outputs, providers',topic:'Terraform',diff:'med',resource:'developer.hashicorp.com/terraform/tutorials/aws',proof:'main.tf + variables.tf on GitHub, terraform plan output'},
+      {id:'t32',title:'Remote state backend: S3 bucket + DynamoDB locking',topic:'Terraform',diff:'med',resource:'HashiCorp Learn: remote state',proof:'backend.tf config + S3 bucket with versioning screenshot'},
+      {id:'t33',title:'Reusable module: create and call from root',topic:'Terraform',diff:'hard',resource:'HashiCorp Learn: modules',proof:'modules/ directory with README, called from root module'},
+      {id:'t34',title:'Terraform in CI: plan on PR, apply on merge',topic:'Terraform',diff:'hard',resource:'Terraform GitHub Actions docs',proof:'GitHub Actions workflow + PR comment with plan output'},
+    ]},
+    {id:'m42',name:'Observability Stack',tasks:[
+      {id:'t35',title:'Deploy kube-prometheus-stack via Helm',topic:'Monitor',diff:'med',resource:'github.com/prometheus-community/helm-charts',proof:'kubectl get pods -n monitoring — all Running screenshot'},
+      {id:'t36',title:'Grafana RED method dashboard from scratch',topic:'Monitor',diff:'hard',resource:'Grafana docs: dashboard building',proof:'Dashboard JSON exported to GitHub + screenshot'},
+      {id:'t37',title:'Custom Prometheus metrics in Python Flask app',topic:'Monitor',diff:'hard',resource:'prometheus_client Python docs',proof:'App code + /metrics endpoint screenshot with custom counter'},
+      {id:'t38',title:'Alert rules + Alertmanager routing to two channels',topic:'Monitor',diff:'hard',resource:'Prometheus alerting docs',proof:'alert-rules.yaml + alertmanager.yaml on GitHub + fired alert'},
+    ]},
+  ]},
+  {id:'p5',label:'Phase 5',name:'SRE & Capstone',color:'#1B3A6B',modules:[
+    {id:'m51',name:'SRE Foundations',tasks:[
+      {id:'t39',title:'Define SLOs for your application with targets',topic:'SRE',diff:'med',resource:'sre.google/sre-book chapters 4-5',proof:'slo-definition.md on GitHub with all three SLOs'},
+      {id:'t40',title:'Error budget dashboard in Grafana',topic:'SRE',diff:'hard',resource:'Google SRE Workbook: implementing SLOs',proof:'Dashboard screenshot showing error budget % remaining'},
+      {id:'t41',title:'Load test with k6: find the breaking point',topic:'SRE',diff:'hard',resource:'k6.io/docs: getting started',proof:'k6 script + load-test-results.md with breaking point'},
+      {id:'t42',title:'Write runbooks for 3 of your Prometheus alerts',topic:'SRE',diff:'med',resource:'Google SRE Book chapter 12',proof:'3 runbook .md files in /docs/runbooks on GitHub'},
+    ]},
+    {id:'m52',name:'Capstone Project',tasks:[
+      {id:'t43',title:'Terraform provisions full AWS infra from zero',topic:'Capstone',diff:'hard',resource:'All Phase 4 Terraform material',proof:'terraform apply output with 0 errors + GitHub Actions link'},
+      {id:'t44',title:'CI/CD pipeline: all stages passing end-to-end',topic:'Capstone',diff:'hard',resource:'All Phase 2 CI/CD material',proof:'GitHub Actions run link with all jobs green'},
+      {id:'t45',title:'Helm chart deployed to EKS with all pods Running',topic:'Capstone',diff:'hard',resource:'All Phase 3 Kubernetes material',proof:'helm list + kubectl get pods showing DEPLOYED and Running'},
+      {id:'t46',title:'Grafana dashboard + SLO tracking live',topic:'Capstone',diff:'hard',resource:'All Phase 4 Observability material',proof:'Live Grafana URL or screenshots + SLO document link'},
+    ]},
+  ]},
+];
+
+const GATES = {
+  m11:['SSH into a server with key auth + explain why password auth should be disabled','Build a grep→awk→sort pipeline from memory on a real log file','Write process-monitor.sh from memory without any tutorial','Explain SIGTERM vs SIGKILL and exactly when to use each','Set up a cron job and verify it ran from the system log'],
+  m12:['Interactive rebase: squash and reword commits cleanly','Recover a deleted branch using git reflog','Write a pre-commit hook that blocks files over 1MB','Explain merge vs rebase and choose correctly for two real scenarios'],
+  m13:['Subnet 192.168.10.0/26 — network, broadcast, range, count without a calculator','Trace a DNS query from browser to authoritative NS from memory','Explain the TCP three-way handshake and its timeout implications','Use curl -v to find TLS certificate expiry and the CA chain'],
+  m21:['Write a multi-stage Dockerfile from memory — explain why each stage exists','Describe Docker layer caching and reorder a bad Dockerfile to maximise cache hits','Write a docker-compose.yml with a healthcheck-gated dependency from memory','Find and fix a HIGH CVE in a base image using Trivy'],
+  m22:['Write a full GitHub Actions workflow from memory — no copy-paste','Explain GitHub Secrets vs Variables and when to use environment-scoped secrets','Create a reusable workflow and call it from two different repos','Explain blue/green deployment and sketch how to implement it in a pipeline'],
+  m31:['Build a VPC with public/private subnets using AWS CLI only — explain every command','Write an IAM policy for single-bucket read-only access and test it works','Explain security group vs NACL and when you need both','Set up a CloudWatch alarm and write what the on-call engineer should do when it fires'],
+  m32:['Write a Deployment YAML from memory with probes, resource limits, and ConfigMap env var','Create a Role + RoleBinding for read-only pod and configmap access only','Debug a CrashLoopBackOff — describe commands to run in order','Write a Helm chart with 3 parameterised values and deploy with a custom values.yaml'],
+  m41:['Explain count vs for_each and when to choose each','Describe what happens internally when terraform plan runs','Write a reusable S3 module with configurable versioning and lifecycle rules','Explain why remote state with locking is essential for a team of engineers'],
+  m42:['Write PromQL for HTTP 5xx rate over 5 minutes from memory','Explain counter vs gauge — give a real example of each','Build a Grafana dashboard with 4 meaningful panels from scratch','Write an Alertmanager config routing DB alerts to one channel and app alerts to another'],
+  m51:['Define an SLO for a checkout service — justify every number','Explain error budget concept in 3 sentences to a non-technical person','Describe incident lifecycle from first alert to post-mortem completion','Write a runbook for p99 latency > 500ms that on-call can follow without prior context'],
+  m52:['Demo the full system: terraform apply → K8s deploy → CI/CD green → Grafana live','Explain every architecture decision in the capstone without notes for 10 minutes'],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let state = {};
+let selected = {dashboard:0, daily:0, progress:0, gates:0};
+
+function initState() {
+  MEMBERS.forEach(m => {
+    const tasks = {};
+    PHASES.forEach(p => p.modules.forEach(mod => mod.tasks.forEach(t => { tasks[t.id] = false; })));
+    const gates = {};
+    Object.keys(GATES).forEach(k => { gates[k] = GATES[k].map(() => false); });
+    state[m.id] = {
+      tasks, gates,
+      streak: Array(30).fill(false),
+      hours: Array(30).fill(0),
+      currentModule: 'm11',
+      currentPhase: 'p1',
+    };
+  });
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function saveState(memberId) {
+  const el = document.getElementById('save-status');
+  el.textContent = 'Saving…';
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId, date: TODAY, data: JSON.stringify(state[memberId]) }),
+    });
+    el.textContent = 'Saved ✓';
+    setTimeout(() => { el.textContent = ''; }, 2000);
+  } catch(e) {
+    el.textContent = 'Save failed';
+  }
+}
+
+async function loadAll() {
+  const el = document.getElementById('save-status');
+  el.textContent = 'Syncing…';
+  try {
+    const res = await fetch(API);
+    const items = await res.json();
+    items.forEach(item => {
+      if (item.memberId && item.data && state[item.memberId]) {
+        const parsed = JSON.parse(item.data);
+        state[item.memberId] = { ...state[item.memberId], ...parsed };
+      }
+    });
+    el.textContent = 'Synced ✓';
+    setTimeout(() => { el.textContent = ''; }, 2000);
+  } catch(e) {
+    el.textContent = 'Sync failed';
+  }
+  renderAll();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function totalTasks(mid) {
+  return Object.values(state[mid].tasks).filter(Boolean).length;
+}
+function totalPossible() {
+  let n = 0;
+  PHASES.forEach(p => p.modules.forEach(m => { n += m.tasks.length; }));
+  return n;
+}
+function gatesPassed(mid) {
+  return Object.values(state[mid].gates).reduce((a, arr) => a + arr.filter(Boolean).length, 0);
+}
+function streak(mid) {
+  let s = 0;
+  const sr = state[mid].streak;
+  for (let i = sr.length - 1; i >= 0; i--) { if (sr[i]) s++; else break; }
+  return s;
+}
+function phaseProgress(mid) {
+  const r = {};
+  PHASES.forEach(p => {
+    let done = 0, total = 0;
+    p.modules.forEach(mod => mod.tasks.forEach(t => { total++; if (state[mid].tasks[t.id]) done++; }));
+    r[p.id] = { done, total, pct: total ? Math.round(done / total * 100) : 0 };
+  });
+  return r;
+}
+function avatar(m, size = 36) {
+  return `<div class="av" style="width:${size}px;height:${size}px;border-radius:50%;background:${m.color}22;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.33)}px;font-weight:700">${m.initials}</div>`;
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ── Member selectors ───────────────────────────────────────────────────────
+function memberSelector(containerId, tab) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = MEMBERS.map(m => `
+    <div class="mbtn ${selected[tab] === MEMBERS.indexOf(m) ? 'active' : ''}"
+         onclick="selectMember(${MEMBERS.indexOf(m)},'${tab}')">
+      ${avatar(m, 36)}
+      <div class="mn">${m.name}</div>
+      <div class="ms">${m.last.split(' ')[0]}</div>
+    </div>`).join('');
+}
+function selectMember(idx, tab) {
+  selected[tab] = idx;
+  renderAll();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const studied = MEMBERS.filter(m => state[m.id].streak[29]).length;
+  const tasks = MEMBERS.reduce((a, m) => a + totalTasks(m.id), 0);
+  const gates = MEMBERS.reduce((a, m) => a + gatesPassed(m.id), 0);
+  document.getElementById('m-studied').textContent = studied;
+  document.getElementById('m-tasks').textContent = tasks;
+  document.getElementById('m-gates').textContent = gates;
+
+  const sorted = [...MEMBERS].sort((a, b) => totalTasks(b.id) - totalTasks(a.id));
+  const tp = totalPossible();
+  document.getElementById('leaderboard').innerHTML = sorted.map((m, i) => {
+    const done = totalTasks(m.id);
+    const pct = tp ? Math.round(done / tp * 100) : 0;
+    const s = streak(m.id);
+    return `<div class="lb-row">
+      <div class="rank ${i===0?'r1':i===1?'r2':i===2?'r3':'rn'}">${i+1}</div>
+      ${avatar(m, 32)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${m.name} ${m.last}</div>
+        <div style="font-size:11px;color:var(--text3)">${done}/${tp} tasks · ${s}-day streak · ${gatesPassed(m.id)} gates</div>
+      </div>
+      <div style="width:100px;margin-right:8px">
+        <div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${m.color}"></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);width:30px;text-align:right">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  memberSelector('dash-members', 'dashboard');
+  const mid = MEMBERS[selected.dashboard].id;
+  const m = MEMBERS[selected.dashboard];
+  const pp = phaseProgress(mid);
+  const streakHtml = state[mid].streak.map((d, i) =>
+    `<div class="sdot ${i===29?'today':d?'on':''}" title="Day ${i+1}"></div>`).join('');
+
+  document.getElementById('dash-detail').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      ${avatar(m, 48)}
+      <div>
+        <div style="font-size:16px;font-weight:600">${m.name} ${m.last}</div>
+        <div style="font-size:12px;color:var(--text3)">Current: ${state[mid].currentModule.toUpperCase()} · Streak: ${streak(mid)} days · Gates: ${gatesPassed(mid)}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:22px;font-weight:700;color:var(--teal)">${Math.round(totalTasks(mid)/totalPossible()*100)}%</div>
+        <div style="font-size:11px;color:var(--text3)">overall</div>
+      </div>
+    </div>
+    <div class="card-title">30-Day Study Streak</div>
+    <div class="streak-grid">${streakHtml}</div>
+    <div class="card-title" style="margin-top:12px">Phase Progress</div>
+    ${PHASES.map(p => `
+      <div class="pbar-row">
+        <div class="pbar-label">${p.label}</div>
+        <div class="pbar"><div class="pbar-fill" style="width:${pp[p.id].pct}%;background:${p.color}"></div></div>
+        <div class="pbar-pct">${pp[p.id].pct}%</div>
+      </div>`).join('')}`;
+}
+
+// ── DAILY TASKS ───────────────────────────────────────────────────────────
+function renderDaily() {
+  memberSelector('daily-members', 'daily');
+  const mid = MEMBERS[selected.daily].id;
+  const m = MEMBERS[selected.daily];
+  const cmod = state[mid].currentModule;
+  const cphase = state[mid].currentPhase;
+  const phase = PHASES.find(p => p.id === cphase);
+  const mod = phase?.modules.find(mo => mo.id === cmod);
+  if (!mod) { document.getElementById('daily-content').innerHTML = '<div class="card"><p style="color:var(--text3)">All modules complete!</p></div>'; return; }
+
+  const hours = state[mid].hours[29] || 0;
+  document.getElementById('daily-content').innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px">${phase.label} · ${mod.name}</div>
+          <div style="font-size:15px;font-weight:600">${m.name}'s Tasks</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:700;color:var(--teal)">${hours}h</div>
+          <div style="font-size:11px;color:var(--text3)">today</div>
+        </div>
+      </div>
+      ${mod.tasks.map(t => {
+        const done = state[mid].tasks[t.id];
+        return `<div class="task-item">
+          <div class="tchk ${done?'done':''}" onclick="toggleTask('${mid}','${t.id}')">
+            ${done ? '✓' : ''}
+          </div>
+          <div class="task-body">
+            <div class="task-title ${done?'done':''}">${t.title}</div>
+            <div class="task-meta">
+              <span class="tag tag-topic">${t.topic}</span>
+              <span class="tag tag-${t.diff}">${t.diff}</span>
+              ${t.resource}
+            </div>
+            <div class="task-proof">Proof: ${t.proof}</div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="log-row">
+        <span style="font-size:12px;color:var(--text3)">Log hours:</span>
+        <input type="number" min="0" max="12" step="0.5" value="${hours}" id="hrs-${mid}" placeholder="0"/>
+        <button class="btn btn-sm" onclick="logHours('${mid}')">Log</button>
+        <button class="btn btn-sm btn-primary" onclick="markStudied('${mid}')">Mark Studied ✓</button>
+      </div>
+    </div>`;
+}
+
+function toggleTask(mid, tid) {
+  state[mid].tasks[tid] = !state[mid].tasks[tid];
+  saveState(mid);
+  renderAll();
+  toast(state[mid].tasks[tid] ? 'Task marked done ✓' : 'Task unmarked');
+}
+function logHours(mid) {
+  const val = parseFloat(document.getElementById('hrs-' + mid)?.value) || 0;
+  state[mid].hours[29] = val;
+  saveState(mid);
+  renderAll();
+  toast('Hours logged: ' + val + 'h');
+}
+function markStudied(mid) {
+  state[mid].streak[29] = true;
+  state[mid].hours[29] = state[mid].hours[29] || 2;
+  saveState(mid);
+  renderAll();
+  toast('Study logged for today ✓');
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────────────────
+function renderProgress() {
+  memberSelector('prog-members', 'progress');
+  const mid = MEMBERS[selected.progress].id;
+  const m = MEMBERS[selected.progress];
+  const pp = phaseProgress(mid);
+
+  document.getElementById('prog-content').innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+        ${avatar(m, 48)}
+        <div>
+          <div style="font-size:15px;font-weight:600">${m.name} ${m.last}</div>
+          <div style="font-size:12px;color:var(--text3)">Active: ${state[mid].currentModule.toUpperCase()} · ${totalTasks(mid)}/${totalPossible()} tasks</div>
+        </div>
+      </div>
+      ${PHASES.map(p => `
+        <div style="margin-bottom:14px">
+          <div class="phase-hdr" style="background:${p.color}18">
+            <div class="phase-dot" style="background:${p.color}">${p.label.replace('Phase ','P')}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600">${p.name}</div>
+              <div style="font-size:11px;color:var(--text3)">${pp[p.id].done}/${pp[p.id].total} tasks · ${pp[p.id].pct}%</div>
+            </div>
+            <div style="width:120px"><div class="pbar"><div class="pbar-fill" style="width:${pp[p.id].pct}%;background:${p.color}"></div></div></div>
+          </div>
+          ${p.modules.map(mod => {
+            let done = 0;
+            mod.tasks.forEach(t => { if (state[mid].tasks[t.id]) done++; });
+            const pct = Math.round(done / mod.tasks.length * 100);
+            const isCur = state[mid].currentModule === mod.id;
+            const badge = pct === 100 ? 'done' : pct > 0 ? 'wip' : 'todo';
+            const badgeTxt = pct === 100 ? 'Mastered' : pct > 0 ? 'In Progress' : 'Not Started';
+            return `<div class="mod-item ${isCur ? 'current' : ''}">
+              <div>
+                <div style="font-size:12px;font-weight:500;color:${isCur?p.color:'var(--text)'}">${mod.name}${isCur?' ← current':''}</div>
+                <div style="font-size:11px;color:var(--text3)">${done}/${mod.tasks.length} tasks</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:80px"><div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${p.color}"></div></div></div>
+                <div class="badge badge-${badge}">${badgeTxt}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── MASTERY GATES ─────────────────────────────────────────────────────────
+function renderGates() {
+  memberSelector('gates-members', 'gates');
+  const mid = MEMBERS[selected.gates].id;
+  const m = MEMBERS[selected.gates];
+  const cmod = state[mid].currentModule;
+  const gateItems = GATES[cmod] || [];
+  const gateState = state[mid].gates[cmod] || gateItems.map(() => false);
+  const allPassed = gateState.every(Boolean);
+  const allMods = PHASES.flatMap(p => p.modules.map(mo => ({ ...mo, phaseColor: p.color, phaseLabel: p.label })));
+  const curMod = allMods.find(mo => mo.id === cmod);
+
+  document.getElementById('gates-content').innerHTML = `
+    <div class="card">
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Active gate for ${m.name}</div>
+        <div style="font-size:15px;font-weight:600">${curMod?.name || cmod}</div>
+      </div>
+      <div class="notice">Check each item ONLY when you can do it from memory — no tutorial, no Google. Every item must pass before unlocking the next module.</div>
+      ${gateItems.map((g, i) => `
+        <div class="gate-item">
+          <div class="gchk ${gateState[i] ? 'passed' : ''}" onclick="toggleGate('${mid}','${cmod}',${i})">
+            ${gateState[i] ? '✓' : ''}
+          </div>
+          <div style="font-size:13px;${gateState[i]?'text-decoration:line-through;color:var(--text3)':''}">${g}</div>
+        </div>`).join('')}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;color:var(--text3)">${gateState.filter(Boolean).length}/${gateItems.length} passed</span>
+        ${allPassed ? `<button class="btn btn-primary" onclick="unlockNext('${mid}')">Unlock Next Module →</button>` : ''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Module Gates</div>
+      ${allMods.map(mod => {
+        const g = GATES[mod.id] || [];
+        const passed = (state[mid].gates[mod.id] || []).filter(Boolean).length;
+        const isCur = mod.id === cmod;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:12px;font-weight:500;color:${isCur?mod.phaseColor:'var(--text)'}">${mod.name}${isCur?' ← active':''}</div>
+            <div style="font-size:11px;color:var(--text3)">${mod.phaseLabel}</div>
+          </div>
+          <div style="font-size:12px;color:${passed===g.length&&g.length>0?'var(--teal)':'var(--text3)'}">${passed}/${g.length}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function toggleGate(mid, modId, idx) {
+  if (!state[mid].gates[modId]) state[mid].gates[modId] = (GATES[modId] || []).map(() => false);
+  state[mid].gates[modId][idx] = !state[mid].gates[modId][idx];
+  saveState(mid);
+  renderAll();
+}
+function unlockNext(mid) {
+  const allMods = PHASES.flatMap(p => p.modules);
+  const idx = allMods.findIndex(mo => mo.id === state[mid].currentModule);
+  if (idx < allMods.length - 1) {
+    state[mid].currentModule = allMods[idx + 1].id;
+    const newPhaseIdx = PHASES.findIndex(p => p.modules.some(mo => mo.id === state[mid].currentModule));
+    if (newPhaseIdx >= 0) state[mid].currentPhase = PHASES[newPhaseIdx].id;
+    saveState(mid);
+    renderAll();
+    toast('Module unlocked! Moving forward ✓');
+  }
+}
+
+// ── CHECK-IN ──────────────────────────────────────────────────────────────
+function sendCheckin() {
+  const text = document.getElementById('update-text').value.trim();
+  if (!text) { alert('Paste your team update first.'); return; }
+  const prompt = encodeURIComponent(
+    'Here is my DevOps team update for today:\n\n' + text +
+    '\n\nPlease:\n1. Analyse each member\'s progress\n2. Flag anyone falling behind or blocked\n3. Give specific action recommendations for the next 48 hours per member\n4. Highlight any common mistakes based on what they completed\n5. Suggest if anyone is ready to move to the next module'
+  );
+  window.open('https://claude.ai/new?q=' + prompt, '_blank');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderDashboard();
+  renderDaily();
+  renderProgress();
+  renderGates();
+  document.getElementById('team-url').textContent = window.location.href;
+}
+
+initState();
+loadAll();
+</script>
+</body>
+</html>
